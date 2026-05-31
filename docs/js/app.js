@@ -17,8 +17,23 @@
 
   const $ = (sel, root = document) => root.querySelector(sel);
 
+  /* ---- conditional fields: hide a control when its dependsOn isn't met --- */
+  function applyDeps() {
+    SCHEMA.forEach((section) => {
+      const block = document.getElementById('sect-' + section.id);
+      if (!block) return;
+      section.fields.forEach((f) => {
+        if (!f.dependsOn) return;
+        const met = state[section.id][f.dependsOn.key] === f.dependsOn.value;
+        const ctrl = block.querySelector('.ctrl[data-field="' + f.key + '"]');
+        if (ctrl) ctrl.classList.toggle('is-hidden', !met);
+      });
+    });
+  }
+
   /* ---- central update: mutate state -> repaint preview + output ---------- */
   function update() {
+    applyDeps();
     try { window.Hypr.renderPreview(state); }
     catch (e) { console.error('preview render failed', e); }
     try { $('#config-output').textContent = window.Hypr.generateConfig(state); }

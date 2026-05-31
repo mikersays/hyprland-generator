@@ -979,3 +979,7 @@ code { font-family: var(--font-mono); }
     scroll-behavior: auto !important;
   }
 }
+
+/* Conditionally-hidden controls (e.g. gradient end-color + angle when the
+   "Gradient border" toggle is off). Toggled by app.js applyDeps(). */
+.ctrl.is-hidden { display: none !important; }

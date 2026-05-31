@@ -130,12 +130,16 @@
     const inactive = r.color('general', 'inactive_border', '#1a2030');
     const layout = r.str('general', 'layout', 'dwindle');
 
+    // Gradient on -> "rgba(..) rgba(..) Ndeg"; off -> a single solid color.
+    const gradient = r.bool('general', 'active_border_gradient', true);
+    const activeBorder = gradient ? c1 + ' ' + c2 + ' ' + angle + 'deg' : c1;
+
     return [
       'general {',
       INDENT + 'gaps_in = ' + r.num('general', 'gaps_in', 5),
       INDENT + 'gaps_out = ' + r.num('general', 'gaps_out', 20),
       INDENT + 'border_size = ' + r.num('general', 'border_size', 2),
-      INDENT + 'col.active_border = ' + c1 + ' ' + c2 + ' ' + angle + 'deg',
+      INDENT + 'col.active_border = ' + activeBorder,
       INDENT + 'col.inactive_border = ' + inactive,
       INDENT + 'layout = ' + layout,
       INDENT + 'resize_on_border = ' + r.bool('general', 'resize_on_border', true),

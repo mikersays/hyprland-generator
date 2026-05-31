@@ -459,6 +459,7 @@
       activeC1,
       activeC2,
       activeAngle,
+      activeGradient,
       inactiveC,
       opacity,
       blurCss,
@@ -488,9 +489,15 @@
       // the whole declaration valid. (A plain color here invalidates it all.)
       const fill = `linear-gradient(${innerBg},${innerBg})`;
       if (focused) {
+        // Active border: a gradient, or a single solid color when the gradient
+        // toggle is off (expressed as a same-color gradient so the layer stays
+        // a valid <image> in the background shorthand).
+        const borderLayer = activeGradient
+          ? `linear-gradient(${activeAngle}deg,${activeC1},${activeC2})`
+          : `linear-gradient(${activeC1},${activeC1})`;
         base +=
           `background:${fill} padding-box,` +
-          `linear-gradient(${activeAngle}deg,${activeC1},${activeC2}) border-box;` +
+          `${borderLayer} border-box;` +
           `border:${borderSize}px solid transparent;`;
       } else {
         base +=
@@ -597,6 +604,7 @@
         PAL.magenta
       );
       const activeAngle = num(get(state, 'general', 'active_border_angle', 45), 45);
+      const activeGradient = bool(get(state, 'general', 'active_border_gradient', true), true);
       const inactiveC = toCssColor(
         get(state, 'general', 'inactive_border', '#2a2f3a'),
         '#2a2f3a'
@@ -720,6 +728,7 @@
         activeC1,
         activeC2,
         activeAngle,
+        activeGradient,
         inactiveC,
         blurCss,
         innerBgAlpha,
