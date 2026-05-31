@@ -198,8 +198,26 @@
       controls.appendChild(block);
     });
 
-    // scroll-spy for nav active state
-    const obs = new IntersectionObserver((entries) => {
+    // scroll-spy for nav active state.
+    // On desktop/tablet (>720px) the .controls element is its own scroll
+    // container, so the observer roots on it. On phones (<=720px) the layout is
+    // a single column and the whole document body scrolls (.controls no longer
+    // scrolls), so the observer must root on the viewport (root: null) or it
+    // would never fire. We rebuild it when crossing that breakpoint so the
+    // correct root is always in use. Desktop behavior is unchanged.
+    setupScrollSpy(controls, nav);
+  }
+
+  // matchMedia drives which scroll root the observer uses. <=720px == the
+  // single-column phone layout where the body owns the scroll.
+  const phoneQuery = window.matchMedia('(max-width: 720px)');
+  let spyObserver = null;
+
+  function setupScrollSpy(controls, nav) {
+    if (spyObserver) { spyObserver.disconnect(); spyObserver = null; }
+
+    const root = phoneQuery.matches ? null : controls;
+    spyObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const id = entry.target.id.replace('sect-', '');
@@ -207,9 +225,26 @@
             c.classList.toggle('is-active', c.dataset.target === id));
         }
       });
-    }, { root: controls, rootMargin: '-10% 0px -70% 0px' });
-    SCHEMA.forEach((s) => obs.observe(document.getElementById('sect-' + s.id)));
+    }, { root: root, rootMargin: '-10% 0px -70% 0px' });
+
+    SCHEMA.forEach((s) => {
+      const el = document.getElementById('sect-' + s.id);
+      if (el) spyObserver.observe(el);
+    });
   }
+
+  // Re-init scroll-spy with the right root when crossing the phone breakpoint.
+  (function bindScrollSpyBreakpoint() {
+    const onChange = () => {
+      const controls = $('#controls');
+      const nav = $('#sectnav');
+      if (controls && nav && controls.children.length) {
+        setupScrollSpy(controls, nav);
+      }
+    };
+    if (phoneQuery.addEventListener) phoneQuery.addEventListener('change', onChange);
+    else if (phoneQuery.addListener) phoneQuery.addListener(onChange); // old Safari
+  })();
 
   /* ---- toast ------------------------------------------------------------- */
   let toastTimer;

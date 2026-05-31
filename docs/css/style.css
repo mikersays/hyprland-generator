@@ -923,8 +923,21 @@ code { font-family: var(--font-mono); }
   to { transform: rotate(360deg); }
 }
 
-/* ============================================================ RESPONSIVE === */
-/* laptop: drop the right output below, keep panel + stage side by side */
+/* ============================================================ RESPONSIVE ===
+ * DESKTOP (>1100px) is intentionally untouched above: a 3-column grid with
+ * sticky .panel / .output whose internal .controls / .output__code scroll.
+ *
+ * TABLET (721–1100px): keep a 2-up panel+stage with output stacked below,
+ * BUT relax the height/overflow traps so vertical scrolling stays natural
+ * even on shorter touch screens.
+ *
+ * PHONE (<=720px): collapse to ONE column where the whole DOCUMENT scrolls
+ * in a single flow — no nested scroll regions — with the live preview pinned
+ * (position: sticky) just under the sticky topbar so it stays visible while
+ * the controls scroll past and update it live.
+ * ========================================================================== */
+
+/* ---- TABLET: two columns, output below, no fixed-height scroll traps ---- */
 @media (max-width: 1100px) {
   .app {
     grid-template-columns: minmax(280px, 340px) 1fr;
@@ -939,33 +952,210 @@ code { font-family: var(--font-mono); }
     position: static;
     max-height: none;
   }
-  .output__code { max-height: 360px; }
+  .output__code {
+    max-height: 360px;
+    overflow: auto;          /* config scrolls inside its own box */
+  }
 }
 
-/* tablet/phone: single column */
+/* =========================================================================
+ * PHONE (<=720px): single natural-scroll column. This is the core fix.
+ * ========================================================================= */
 @media (max-width: 720px) {
-  .topbar { padding: 0 14px; height: auto; min-height: var(--topbar-h); flex-wrap: wrap; gap: 10px; }
-  .topbar__actions { width: 100%; justify-content: flex-start; }
+
+  /* ---- Let the document body own the scroll; kill nested scroll traps ----
+   * `overflow-x: clip` blocks horizontal page scroll WITHOUT making the body
+   * a scroll container (which `hidden` would, and which can break sticky and
+   * momentum scrolling). overscroll-behavior stops scroll-chaining glitches. */
+  html, body {
+    height: auto;
+    min-height: 100%;
+  }
+  body {
+    overflow-x: clip;
+    overflow-y: visible;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---- Topbar: keep it exactly --topbar-h tall so the sticky preview that
+   * pins at top:var(--topbar-h) lines up with no gap/overlap. The brand + 3
+   * action buttons don't fit a phone width at full size, so compress them
+   * (smaller padding/labels) and let the brand truncate rather than letting
+   * the row overflow the viewport (which caused horizontal page scroll). */
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .brand { min-width: 0; flex: 0 1 auto; }
+  .brand__text { min-width: 0; }
+  .brand__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar__actions { gap: 6px; flex: 0 0 auto; }
+  .topbar__actions .btn { padding: 8px 10px; font-size: 11.5px; }
+
+  /* ---- App: a plain vertical flow, no grid height, source order via order.
+   * DOM order is panel -> stage -> output; we want stage(preview) first. */
   .app {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "stage"
-      "panel"
-      "output";
-    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    padding: 12px;
     gap: 14px;
   }
+  /* Flex column items default to min-width:auto, which lets a child refuse to
+   * shrink below its CONTENT width (the sectnav chip rail, long config lines)
+   * and blow past the viewport -> horizontal page scroll. Pin every direct
+   * child to the column width and allow it to shrink. */
+  .app > * {
+    order: 4;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .stage  { order: 1; }
+  .panel  { order: 2; }
+  .output { order: 3; }
+
+  /* ---- Sticky live preview right under the sticky topbar.
+   * No ancestor (.app is now plain flow, body overflow is visible/clip) clips
+   * sticky, so it pins to the viewport. Compact, fixed height; the bezel/
+   * preview keep their own aspect handling inside. */
+  .stage {
+    position: sticky;
+    top: var(--topbar-h);
+    z-index: 40;
+    gap: 8px;
+    /* fade the bottom edge so controls scrolling behind it look intentional */
+    background: linear-gradient(180deg, var(--bg) 86%, rgba(7, 10, 16, 0));
+    padding-bottom: 10px;
+    margin-bottom: -2px;
+  }
+  .stage__bezel { padding: 12px; border-radius: 16px; }
+  /* shrink the 16:10 preview to a calm height that leaves room for controls */
+  .preview { aspect-ratio: auto; height: 24vh; min-height: 150px; max-height: 230px; }
+  .stage__hint { display: none; }   /* save vertical space on phones */
+
+  /* ---- Panel / controls: no inner scroller; grows with content ---- */
   .panel {
     position: static;
     max-height: none;
+    overflow: visible;
+    min-width: 0;
+    /* drop the glass card chrome — each section becomes its own card below */
+    background: transparent;
+    border: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: 0;
   }
-  .controls { max-height: 60vh; }
-  .stage { order: -1; }
+  /* panel is a flex column (from desktop base); its children must shrink too */
+  .panel > * { min-width: 0; max-width: 100%; }
+  .panel__head { padding: 4px 2px 6px; border-bottom: 0; }
+
+  /* ---- Section nav: a sticky horizontal chip rail that never traps vertical.
+   * It sticks just under the preview so jumping sections is always reachable. */
+  .sectnav {
+    position: sticky;
+    top: calc(var(--topbar-h) + 24vh + 6px);
+    z-index: 35;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;          /* horizontal swipe here; vertical passes up */
+    scrollbar-width: none;
+    /* bleed to screen edges WITHOUT widening the layout: negative margins are
+     * offset by equal padding so the box stays within the column width. */
+    margin: 0 -12px;
+    width: calc(100% + 24px);
+    max-width: calc(100% + 24px);
+    padding: 10px 12px;
+    border-radius: 0;
+    background: rgba(7, 10, 16, 0.82);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .sectnav::-webkit-scrollbar { display: none; }
+  .sectnav__chip {
+    padding: 9px 14px;            /* >=40px tap height */
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .controls {
+    overflow: visible;           /* the body owns vertical scroll now */
+    flex: none;
+    padding: 14px 0 4px;
+    gap: 0;
+  }
+
+  /* Each section becomes a tappable card; scroll-margin clears the two sticky
+   * layers (topbar + preview + sectnav) when chips smooth-scroll to it. */
+  .cgroup {
+    padding: 16px;
+    margin-bottom: 14px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-card);
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    scroll-margin-top: calc(var(--topbar-h) + 24vh + 60px);
+  }
+  .cgroup:last-child { border-bottom: 1px solid var(--hairline); margin-bottom: 0; }
+
+  /* ---- Output: flows naturally; config scrolls horizontally in its box ---- */
+  .output {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+  .output__code {
+    max-height: 50vh;            /* tall but not endless; scrolls inside */
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---- Comfortable touch targets (>=40px hit area) for every control ---- */
+  .ctrl { padding: 12px; }
+  .seg__btn { padding: 10px 8px; min-height: 40px; }
+  .ctrl--color .swatch { height: 44px; }
+  .switch__track { width: 50px; height: 28px; }
+  .switch__track::after { width: 22px; height: 22px; }
+  .switch input:checked + .switch__track::after { left: calc(100% - 25px); }
+  /* enlarge the slider hit area without changing its visual thickness */
+  .ctrl--slider .ctrl__range { height: 28px; padding: 11px 0; background-clip: content-box; }
+  .ctrl--slider .ctrl__range::-webkit-slider-thumb { width: 22px; height: 22px; }
+  .ctrl--slider .ctrl__range::-moz-range-thumb { width: 22px; height: 22px; }
+  .ctrl__dropdown { padding: 12px; min-height: 44px; }
 }
 
+/* small phones: tighten the preview a touch more, hide the brand sub-tag */
 @media (max-width: 420px) {
   .btn { padding: 8px 12px; font-size: 12px; }
   .brand__name { font-size: 18px; }
+  .brand__tag { display: none; }
+  .preview { height: 21vh; min-height: 140px; }
+  .sectnav { top: calc(var(--topbar-h) + 21vh + 6px); }
+  .cgroup { scroll-margin-top: calc(var(--topbar-h) + 21vh + 60px); }
+}
+
+/* ---- Modern viewport units: dodge the mobile 100vh URL-bar jump where
+ * supported. dvh == vh when there's no browser chrome, so desktop is safe. */
+@supports (height: 100dvh) {
+  @media (max-width: 720px) {
+    .preview { height: 24dvh; }
+    .sectnav { top: calc(var(--topbar-h) + 24dvh + 6px); }
+    .cgroup { scroll-margin-top: calc(var(--topbar-h) + 24dvh + 60px); }
+    .output__code { max-height: 50dvh; }
+  }
+  @media (max-width: 420px) {
+    .preview { height: 21dvh; }
+    .sectnav { top: calc(var(--topbar-h) + 21dvh + 6px); }
+    .cgroup { scroll-margin-top: calc(var(--topbar-h) + 21dvh + 60px); }
+  }
 }
 
 /* respect reduced motion */
