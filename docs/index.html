@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hyprwright · Live Hyprland Config Helper</title>
+  <meta name="description" content="Pick your Hyprland config visually and watch a live mock-up update in real time. Export a ready-to-use hyprland.conf." />
+
+  <!-- Inline SVG favicon: a glowing gradient shard -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232de2ff'/%3E%3Cstop offset='1' stop-color='%233affab'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%23070a10'/%3E%3Cpath d='M16 5 L24 16 L16 27 L8 16 Z' fill='url(%23g)'/%3E%3C/svg%3E" />
+
+  <!-- Fonts: Bricolage Grotesque (display) + IBM Plex Mono (technical body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Atmospheric layers (styled in CSS) -->
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="bg-noise" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <div class="brand__text">
+        <h1 class="brand__name">Hyprwright</h1>
+        <p class="brand__tag">live hyprland config helper</p>
+      </div>
+    </div>
+    <div class="topbar__actions">
+      <button class="btn btn--ghost" id="btn-reset" type="button">Reset</button>
+      <button class="btn btn--ghost" id="btn-randomize" type="button">Surprise me</button>
+      <a class="btn btn--ghost" href="https://wiki.hyprland.org/Configuring/Variables/" target="_blank" rel="noopener">Docs ↗</a>
+    </div>
+  </header>
+
+  <main class="app">
+    <!-- LEFT: control panel (populated by app.js from SCHEMA) -->
+    <section class="panel" aria-label="Configuration controls">
+      <div class="panel__head">
+        <h2 class="panel__title">Configure</h2>
+        <p class="panel__sub">Tune it. Watch it. Ship the file.</p>
+      </div>
+      <nav class="sectnav" id="sectnav" aria-label="Sections"></nav>
+      <div class="controls" id="controls"></div>
+    </section>
+
+    <!-- CENTER: live visual preview (owned by preview.js) -->
+    <section class="stage" aria-label="Live preview">
+      <div class="stage__bezel">
+        <div class="preview" id="preview">
+          <div class="preview__wallpaper" id="wallpaper"></div>
+          <div class="preview__bar" id="bar">
+            <span class="bar__chip bar__chip--logo">❄</span>
+            <span class="bar__ws"><i class="ws ws--active">1</i><i class="ws">2</i><i class="ws">3</i><i class="ws">4</i></span>
+            <span class="bar__title" id="bar-title">kitty — ~/.config/hypr</span>
+            <span class="bar__right"><i>  62%</i><i>  84%</i><i id="bar-clock">09:41</i></span>
+          </div>
+          <div class="preview__windows" id="windows" data-layout="dwindle">
+            <!-- window tiles injected & styled by preview.js -->
+          </div>
+        </div>
+      </div>
+      <p class="stage__hint" id="stage-hint">Focused window shows the active gradient border · others show inactive.</p>
+    </section>
+
+    <!-- RIGHT: generated config output (filled by app.js via generator.js) -->
+    <aside class="output" aria-label="Generated configuration">
+      <div class="output__head">
+        <h2 class="output__title">hyprland.conf</h2>
+        <div class="output__actions">
+          <button class="btn btn--solid" id="btn-copy" type="button">Copy</button>
+          <button class="btn btn--solid" id="btn-download" type="button">Download</button>
+        </div>
+      </div>
+      <pre class="output__code"><code id="config-output">// generating…</code></pre>
+      <p class="output__foot">Drop this into <code>~/.config/hypr/hyprland.conf</code></p>
+    </aside>
+  </main>
+
+  <footer class="sitefoot">
+    <span>Hyprwright — not affiliated with Hyprland. Made for ricers.</span>
+    <span class="sitefoot__dot">·</span>
+    <a href="https://wiki.hyprland.org" target="_blank" rel="noopener">hyprland wiki</a>
+  </footer>
+
+  <!-- Toast for copy feedback -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- order matters: schema first, then renderers, then app wiring -->
+  <script src="js/schema.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

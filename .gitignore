@@ -1,0 +1,10 @@
+# Browser-automation / test artifacts
+.playwright-mcp/
+*.log
+
+# OS / editor cruft
+.DS_Store
+*.swp
+
+# Screenshots / scratch
+hypr-*.png
